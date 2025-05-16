@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Вход ограничен</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f4f6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      background: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+
+    h1 {
+      color: #dc2626;
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-style: italic;
+      color: #4b5563;
+      font-size: 14px;
+      margin-bottom: 30px;
+    }
+
+    .input-group {
+      position: relative;
+      margin-bottom: 25px;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px 10px 6px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      outline: none;
+    }
+
+    label {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: white;
+      padding: 0 4px;
+      color: #9ca3af;
+      font-size: 16px;
+      transition: 0.2s ease all;
+      pointer-events: none;
+    }
+
+    input:focus + label,
+    input:not(:placeholder-shown) + label {
+      top: 0px;
+      left: 10px;
+      font-size: 12px;
+      color: #3b82f6;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    button:hover {
+      background: #2563eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Вход ограничен!</h1>
+    <p>сайт находится в разработке, введите сервисный код, чтобы войти в систему</p>
+    <form id="codeForm">
+      <div class="input-group">
+        <input type="text" id="codeInput" placeholder=" " required />
+        <label for="codeInput">Сервисный код</label>
+      </div>
+      <button type="submit">Войти</button>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById("codeForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const code = document.getElementById("codeInput").value.trim();
+      if (code === "090207") {
+        window.location.href = "/auth";
+      } else {
+        alert("Неверный сервисный код");
+      }
+    });
+  </script>
+</body>
+</html>

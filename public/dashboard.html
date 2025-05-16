@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Панель управления</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      display: flex;
+      height: 100vh;
+    }
+
+    .panel {
+      flex: 1;
+      padding: 1rem;
+      border-right: 1px solid #ddd;
+      overflow-y: auto;
+    }
+
+    .panel:last-child {
+      border-right: none;
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    .item {
+      background-color: rgb(238, 238, 238);
+      padding: 0.5rem;
+      margin-bottom: 0.3rem;
+      border-radius: 6px;
+      cursor: pointer;
+      color: #000;
+    }
+
+    .item:hover {
+      background: #f0f0f0;
+    }
+
+    .item.active {
+      background: #cce5ff;
+    }
+
+    .placeholder {
+      color: #999;
+      text-align: center;
+    }
+
+    .bottom-buttons {
+      position: absolute;
+      bottom: 1rem;
+      left: 1rem;
+    }
+
+    .bottom-buttons-stud {
+      position: absolute;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap; /* чтобы кнопки не переносились */
+    }
+
+    .bottom-buttons-stud button {
+      display: inline-block;
+      margin: 0 0.5rem;
+    }
+
+    button {
+      background-color: #e7e7e7; /* по умолчанию — серые */
+      color: #000;
+      border: none;
+      padding: 10px 16px;
+      margin: 5px;
+      font-size: 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+
+    button[style*="background:green"] {
+      background-color: #4CAF50 !important;
+      color: white;
+    }
+
+    button[style*="background:red"] {
+      background-color: #f44336 !important;
+      color: white;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button:disabled {
+      background-color: #eee !important;
+      color: #888;
+      cursor: not-allowed;
+    }
+
+    #studentItems.grid-students {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    #studentItems .placeholder-text {
+      grid-column: 1 / -1; /* Чтобы занимало всю ширину */
+      text-align: center;
+      color: gray;
+    }
+
+
+    #classItems {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr); /* 2 колонки */
+      gap: 8px;
+    }
+
+    .class-button {
+      padding: 8px 12px;
+      color: #000;
+      background: #eee;
+      border-radius: 6px;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.2s;
+      user-select: none;
+    }
+
+    .class-button:hover {
+      background: #ddd;
+    }
+
+    .class-button.selected,
+    .class-button.active {
+      background-color: #ade1ff;
+      color: rgb(0, 0, 0);
+    }
+
+    #classList {
+      position: relative;
+      flex: 0.6;
+      padding-bottom: 70px; /* чтобы не перекрывать список классов */
+      text-align: center;   /* для выравнивания по центру */
+    }
+
+    .bottom-buttons {
+      position: absolute;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap; /* кнопки в строку */
+    }
+
+    .bottom-buttons button {
+      display: inline-block;
+      margin: 0 0.5rem;
+    }
+
+    #studentDetails p {
+      text-align: left;
+    }
+
+    #studentList {
+      position: relative;
+      padding-bottom: 70px; /* чтобы кнопки не перекрывали контент */
+      text-align: center;   /* выравнивание содержимого по центру */
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .input-row label {
+      width: 130px;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .modal-input {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+
+    .modal-input:focus {
+      border-color: #007bff;
+      outline: none;
+    }
+
+    .modal-btn {
+      padding: 8px 14px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: none;
+      background: #ccc;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .modal-btn:hover {
+      background: #bbb;
+    }
+
+    .modal-btn.primary {
+      background: #007bff;
+      color: white;
+    }
+
+    .modal-btn.primary:hover {
+      background: #005dc0;
+    }
+
+
+
+
+  </style>
+</head>
+<body>
+  <div class="panel" id="classList">
+    <h2>Классы</h2>
+    <div id="classItems" class="placeholder">Загрузка...</div>
+
+    <div class="bottom-buttons">
+      <button onclick="openAddClassModal()">Добавить класс</button>
+      <button onclick="deleteCurrentClass()" style="background:red">Удалить класс</button>
+    </div>
+    
+  </div>
+
+  <div class="panel" id="studentList">
+    <h2>Ученики</h2>
+    <div id="studentItems" class="grid-students">
+      <div class="placeholder-text">Выберите класс, чтобы отобразить учеников</div>
+    </div>  
+      <div class="bottom-buttons-stud">
+        <button onclick="openAddStudentModal()">Добавить ученика</button>
+        <button onclick="openDeleteStudentModal()">Удалить ученика</button>
+      </div>
+  </div>
+  
+
+  <div class="panel" id="studentInfo">
+    <h2 style="text-align: center">Информация</h2>
+    <div id="studentDetails" class="placeholder">Выберите ученика, чтобы увидеть информацию</div>
+  
+    <div id="studentInfoButtons" style="display:none; margin-top: 15px; text-align: center;">
+      <button onclick="openEditStudentModal()">Редактировать</button>
+      <button onclick="openBooksModal()">Книги</button>
+      <button onclick="clearStudentInfo()">Закрыть</button>
+    </div>
+  </div>
+  
+
+  <!-- Модальное окно -->
+  <div id="modalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#0008; justify-content:center; align-items:center;">
+    <div style="background:white; padding:20px; border-radius:10px; width:300px;">
+      <h3>Добавить класс</h3>
+      <label>Выберите класс:</label><br>
+      <select id="gradeSelect">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+        <option value="8">8</option>
+        <option value="9">9</option>
+        <option value="10">10</option>
+        <option value="11">11</option>
+        <option value="11">Учителя</option>
+      </select><br><br>
+
+      <label>Выберите букву (необязательно):</label><br>
+      <select id="letterSelect">
+        <option value="">(без буквы)</option>
+        <option value="А">А</option>
+        <option value="Б">Б</option>
+        <option value="В">В</option>
+        <option value="Г">Г</option>
+        <option value="Д">Д</option>
+      </select><br><br>
+
+      <button onclick="addClass()" style="background:green">Добавить</button>
+      <button onclick="closeAddClassModal()">Отменить</button>
+    </div>
+  </div>
+
+  <!-- Модальное окно подтверждения удаления -->
+  <div id="deleteModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#0008; justify-content:center; align-items:center;">
+    <div style="background:white; padding:20px; border-radius:10px; width:320px; text-align:center;">
+      <p id="deleteText">Вы уверены, что хотите удалить класс?</p>
+      <button onclick="confirmDeleteClass()" style="margin-right: 10px;">Да</button>
+      <button onclick="closeDeleteModal()">Нет</button>
+    </div>
+  </div>
+
+  <!-- Модальное окно подтверждения удаления ученика -->
+  <div id="deleteStudentModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#0008; justify-content:center; align-items:center;">
+    <div style="background:white; padding:20px; border-radius:10px; width:320px; text-align:center;">
+      <p id="deleteStudentText">Вы уверены, что хотите удалить ученика?</p>
+      <button onclick="confirmDeleteStudent()" style="margin-right: 10px;">Да</button>
+      <button onclick="closeDeleteStudentModal()">Нет</button>
+    </div>
+  </div>
+
+  <!-- Модальное окно Книги -->
+  <div id="booksModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#0008; justify-content:center; align-items:center; z-index:1200;">
+    <div style="
+      background:white;
+      padding:24px;
+      border-radius:12px;
+      width:700px;
+      max-height:90vh;
+      overflow:auto;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+    ">
+      <h2 style="margin-top: 0; text-align: center; color: #333;">Книги ученика</h2>
+
+      <table id="booksTable" border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%; margin-bottom: 15px;">
+        <thead>
+          <tr style="background:#f0f0f0;">
+            <th>Удалить</th>
+            <th>Дата выдачи</th>
+            <th>Инв. Номер</th>
+            <th>Отдел</th>
+            <th>Автор и заглавие книги</th>
+            <th>Вернута</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Книги динамически -->
+        </tbody>
+      </table>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button onclick="openAddBookRow()" class="modal-btn primary">Добавить</button>
+        <button onclick="closeBooksModal()" class="modal-btn">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Модальное окно добавления ученика -->
+  <div id="addStudentModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#0008; justify-content:center; align-items:center; z-index:1000;">
+    <div style="
+      background:white;
+      padding:24px;
+      border-radius:12px;
+      width:450px;
+      max-height:90vh;
+      overflow:auto;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      font-family: sans-serif;
+    ">
+      <h2 style="margin-top: 0; text-align: center; color: #333;">Добавить ученика</h2>
+
+      <div style="display: grid; gap: 10px;">
+
+        <div class="input-row"><label>Номер</label><input type="text" id="studentNumber" name="Номер" class="modal-input"></div>
+        <div class="input-row"><label>Год</label><input type="text" id="studentYear" name="Год" class="modal-input"></div>
+        <div class="input-row"><label>Фамилия</label><input type="text" id="studentLastName" name="Фамилия" class="modal-input"></div>
+        <div class="input-row"><label>Имя</label><input type="text" id="studentFirstName" name="Имя" class="modal-input"></div>
+        <div class="input-row"><label>Отчество</label><input type="text" id="studentMiddleName" name="Отчество" class="modal-input"></div>
+        <div class="input-row"><label>Год рождения</label><input type="date" id="studentBirthYear" name="Год рождения" class="modal-input"></div>
+        <div class="input-row"><label>Образование</label><input type="text" id="studentEducation" name="Образование" class="modal-input"></div>
+        <div class="input-row"><label>Домашний адрес</label><input type="text" id="studentAddress" name="Домашний адрес" class="modal-input"></div>
+        <div class="input-row"><label>Телефон</label><input type="text" id="studentPhone" name="Номер телефона" value="+7" class="modal-input"></div>
+        <div class="input-row"><label>Дата регистрации</label><input type="date" id="studentRegDate" name="Дата регистрации" class="modal-input"></div>
+
+      </div>
+
+      <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+        <button onclick="submitStudent()" class="modal-btn primary">Добавить</button>
+        <button onclick="closeAddStudentModal()" class="modal-btn">Отменить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно редактирования ученика -->
+  <div id="editStudentModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#0008; justify-content:center; align-items:center; z-index:1100;">
+    <div style="
+      background:white;
+      padding:24px;
+      border-radius:12px;
+      width:450px;
+      max-height:90vh;
+      overflow:auto;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      font-family: sans-serif;
+    ">
+      <h2 style="margin-top: 0; text-align: center; color: #333;">Редактировать ученика</h2>
+
+      <div style="display: grid; gap: 10px;">
+
+        <div class="input-row"><label>Номер</label><input type="text" id="editStudentNumber" name="Номер" class="modal-input"></div>
+        <div class="input-row"><label>Год</label><input type="text" id="editStudentYear" name="Год" class="modal-input"></div>
+        <div class="input-row"><label>Фамилия</label><input type="text" id="editStudentLastName" name="Фамилия" class="modal-input"></div>
+        <div class="input-row"><label>Имя</label><input type="text" id="editStudentFirstName" name="Имя" class="modal-input"></div>
+        <div class="input-row"><label>Отчество</label><input type="text" id="editStudentMiddleName" name="Отчество" class="modal-input"></div>
+        <div class="input-row"><label>Год рождения</label><input type="date" id="editStudentBirthYear" name="Год рождения" class="modal-input"></div>
+        <div class="input-row"><label>Образование</label><input type="text" id="editStudentEducation" name="Образование" class="modal-input"></div>
+        <div class="input-row"><label>Домашний адрес</label><input type="text" id="editStudentAddress" name="Домашний адрес" class="modal-input"></div>
+        <div class="input-row"><label>Телефон</label><input type="text" id="editStudentPhone" name="Номер телефона" class="modal-input"></div>
+        <div class="input-row"><label>Дата регистрации</label><input type="date" id="editStudentRegDate" name="Дата регистрации" class="modal-input"></div>
+
+      </div>
+
+      <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+        <button onclick="submitEditStudent()" class="modal-btn primary">Сохранить</button>
+        <button onclick="closeEditStudentModal()" class="modal-btn">Отменить</button>
+      </div>
+    </div>
+  </div>
+
+
+
+
+
+  <script>
+    const firebaseConfig = {
+      databaseURL: "https://my-library-d430a-default-rtdb.europe-west1.firebasedatabase.app/",
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+  
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user) {
+      alert("Сначала выполните вход");
+      location.href = "auth.html";
+    }
+  
+    const classItems = document.getElementById("classItems");
+    const studentItems = document.getElementById("studentItems");
+    const studentDetails = document.getElementById("studentDetails");
+  
+    let classes = {}; // классы из базы
+    let currentClass = null;
+    let currentStudent = null;
+  
+    document.addEventListener("DOMContentLoaded", () => {
+      loadClassesFromDatabase();
+    });
+  
+    function loadClassesFromDatabase() {
+      const schoolName = localStorage.getItem("school");
+      if (!schoolName) {
+        alert("Школа не найдена в localStorage");
+        location.href = "auth.html";
+        return;
+      }
+  
+      firebase.database().ref("list1").once("value")
+        .then(snapshot => {
+          const schools = snapshot.val();
+          let schoolId = null;
+  
+          for (const [id, data] of Object.entries(schools)) {
+            if (data.school === schoolName) {
+              schoolId = id;
+              break;
+            }
+          }
+  
+          if (!schoolId) {
+            alert("Школа не найдена в базе");
+            return;
+          }
+  
+          const studentsJsonPath = `list1/${schoolId}/students_json`;
+          return firebase.database().ref(studentsJsonPath).once("value");
+        })
+        .then(jsonSnap => {
+          if (!jsonSnap) return;
+  
+          const jsonStr = jsonSnap.val();
+          try {
+            classes = jsonStr ? JSON.parse(jsonStr) : {};
+          } catch (e) {
+            console.error("Ошибка при парсинге JSON:", e);
+            classes = {};
+          }
+  
+          renderClassList();
+        })
+        .catch(error => {
+          console.error("Ошибка при загрузке классов:", error);
+          alert("Ошибка при загрузке классов");
+        });
+    }
+  
+    function renderClassList() {
+    const sortedClassNames = Object.keys(classes).sort(sortClasses);
+    classItems.innerHTML = "";
+
+    if (sortedClassNames.length === 0) {
+      classItems.innerHTML = '<div class="placeholder">Добавьте класс</div>';
+    } else {
+      sortedClassNames.forEach(className => {
+        const div = document.createElement("div");
+        div.textContent = className;
+        div.className = "class-button";
+
+        // Если это текущий класс, сразу помечаем
+        if (className === currentClass) {
+          div.classList.add("selected");
+        }
+
+        div.onclick = () => {
+          // Снять выделение со всех других кнопок
+          document.querySelectorAll("#classItems .class-button").forEach(btn => {
+            btn.classList.remove("selected", "active"); // убираем оба
+          });
+
+          // Добавить классы выделения к текущей
+          div.classList.add("selected", "active");
+
+          // Сохраняем текущий класс
+          currentClass = className;
+
+          // Отобразить учеников
+          selectClass(className, div);
+        };
+
+        classItems.appendChild(div);
+      });
+    }
+
+    studentItems.innerHTML = '<div class="placeholder-text">Выберите класс, чтобы отобразить учеников</div>';
+    studentDetails.innerHTML = '<div class="placeholder">Выберите ученика, чтобы увидеть информацию</div>';
+  }
+
+
+  function deleteSelectedStudent() {
+    if (!currentClass || !currentStudent) {
+      alert("Сначала выберите ученика");
+      return;
+    }
+
+    // Здесь будет окно подтверждения удаления ученика
+    alert(`Удалить ученика ${currentStudent}?`);
+  }
+
+
+    let currentStudents = []; // ученики текущего класса
+
+    // вызывается при выборе класса
+    function showClassDetails(className, students) {
+      currentClass = className;
+      currentStudents = students;
+      // остальная логика отображения данных уже есть
+    }
+
+    function deleteCurrentClass() {
+      if (!currentClass) {
+        alert("Класс не выбран");
+        return;
+      }
+
+      const studentCount = currentStudents.length;
+      const ending = getStudentEnding(studentCount);
+      const text = `Вы уверены, что хотите удалить <b>${currentClass}</b> с ${studentCount} ученик${ending}?`;
+      document.getElementById("deleteText").innerHTML = text;
+      document.getElementById("deleteModal").style.display = "flex";
+    }
+
+    function closeDeleteModal() {
+      document.getElementById("deleteModal").style.display = "none";
+    }
+
+    function confirmDeleteClass() {
+      const user = JSON.parse(localStorage.getItem("user"));
+      const schoolName = user?.school;
+
+      if (!schoolName) {
+        alert("Школа не найдена в localStorage");
+        return;
+      }
+
+      firebase.database().ref("list1").once("value")
+        .then(snapshot => {
+          const schools = snapshot.val();
+          let schoolId = null;
+
+          for (const [id, data] of Object.entries(schools)) {
+            if (data.school === schoolName) {
+              schoolId = id;
+              break;
+            }
+          }
+
+          if (!schoolId) {
+            alert("Школа не найдена в базе");
+            return;
+          }
+
+          const studentsJsonPath = `list1/${schoolId}/students_json`;
+
+          return firebase.database().ref(studentsJsonPath).once("value").then(jsonSnap => {
+            let json = {};
+            try {
+              json = jsonSnap.exists() ? JSON.parse(jsonSnap.val()) : {};
+            } catch (e) {
+              console.error("Ошибка при парсинге JSON:", e);
+            }
+
+            if (!json[currentClass]) {
+              alert("Класс не найден");
+              return;
+            }
+
+            delete json[currentClass];
+
+            return firebase.database().ref(studentsJsonPath).set(JSON.stringify(json));
+          });
+        })
+        .then(() => {
+          closeDeleteModal();
+          currentClass = null;
+          currentStudents = [];
+          loadClassesFromDatabase(); // обновляем список классов
+        })
+        .catch(err => {
+          console.error("Ошибка при удалении класса:", err);
+          alert("Ошибка при удалении класса");
+        });
+    }
+
+    function openAddClassModal() {
+      document.getElementById("modalOverlay").style.display = "flex";
+    }
+    function closeAddClassModal() {
+      document.getElementById("modalOverlay").style.display = "none";
+    }
+
+    function openEditStudentModal() {
+      if (!currentStudent) {
+        alert("Выберите ученика для редактирования");
+        return;
+      }
+
+      document.getElementById("editStudentNumber").value = currentStudent.number || "";
+      document.getElementById("editStudentYear").value = currentStudent.year || "";
+      document.getElementById("editStudentLastName").value = currentStudent.lastName || "";
+      document.getElementById("editStudentFirstName").value = currentStudent.firstName || "";
+      document.getElementById("editStudentMiddleName").value = currentStudent.middleName || "";
+      document.getElementById("editStudentBirthYear").value = currentStudent.birthYear || "";
+      document.getElementById("editStudentEducation").value = currentStudent.education || "";
+      document.getElementById("editStudentAddress").value = currentStudent.address || "";
+      document.getElementById("editStudentPhone").value = currentStudent.phone || "";
+      document.getElementById("editStudentRegDate").value = currentStudent.regDate || "";
+
+      document.getElementById("editStudentModal").style.display = "flex";
+    }
+
+    function closeEditStudentModal() {
+      document.getElementById("editStudentModal").style.display = "none";
+    }
+
+
+
+    function getStudentEnding(count) {
+      if (count % 10 === 1 && count % 100 !== 11) return "";
+      if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return "а";
+      return "ов";
+    }
+
+  
+    function sortClasses(a, b) {
+      if (a === "Учителя") return 1;
+      if (b === "Учителя") return -1;
+
+      const regex = /^(\d+)([А-Яа-я]*)$/;
+      const [, numA = "0", strA = ""] = a.match(regex) || [];
+      const [, numB = "0", strB = ""] = b.match(regex) || [];
+
+      const diff = parseInt(numA) - parseInt(numB);
+      return diff !== 0 ? diff : strA.localeCompare(strB, 'ru');
+    }
+
+
+  
+    let currentClassElement = null; // глобально, если нужно обновлять без сброса
+
+    function selectClass(className, element) {
+      // Проверка на null, чтобы избежать ошибки
+      if (!element) return;
+
+      // Обновляем активный класс
+      document.querySelectorAll('#classItems .item').forEach(el => el.classList.remove('active'));
+      element.classList.add('active');
+      document.getElementById("studentInfoButtons").style.display = "none";
+      currentClassElement = element;
+
+      currentClass = className;
+      currentStudent = null;
+
+      const studentsList = classes[className] || [];
+
+      if (!studentsList.length) {
+        studentItems.innerHTML = '<div class="placeholder-text">Нет учеников в этом классе</div>';
+      } else {
+        // Очищаем
+        studentItems.innerHTML = "";
+
+        // ✅ 3. Сортировка по фамилии
+        studentsList.sort((a, b) => (a["Фамилия"] || "").localeCompare(b["Фамилия"] || ""));
+
+        studentsList.forEach((student, index) => {
+          const div = document.createElement("div");
+
+          // ✅ 4. Фамилия перед именем
+          const name = `${student.Фамилия || ""} ${student.Имя || ""}`.trim() || `Без имени (${index})`;
+
+          div.textContent = name;
+          div.className = "class-button";
+          div.style.margin = "4px"; // ✅ 5. Отступ между учениками
+
+          div.onclick = () => {
+            // ✅ 7. Убираем прошлое выделение
+            document.querySelectorAll(".class-button.active").forEach(el => el.classList.remove("active"));
+            div.classList.add("active");
+
+            selectStudent({ 
+              id: `${className}_${index}`,
+              class: className,
+              number: student["Номер"] || "—",
+              year: student["Год"] || "—",
+              lastName: student["Фамилия"] || "—",
+              firstName: student["Имя"] || "—",
+              middleName: student["Отчество"] || "—",
+              birthYear: student["Год рождения"] || "—",
+              education: student["Образование"] || "—",
+              address: student["Домашний адрес"] || "—",
+              phone: student["Номер телефона"] || "—",
+              regDate: student["Дата регистрации"] || "—",
+              password: student["Пароль"] || "—"
+            }, div);
+          };
+
+          studentItems.appendChild(div);
+        });
+      }
+
+      studentDetails.innerHTML = '<div class="placeholder">Выберите ученика, чтобы увидеть информацию</div>';
+    }
+
+  
+    function selectStudent(student, element) {
+      document.querySelectorAll('#studentItems .item').forEach(el => el.classList.remove('active'));
+      element.classList.add('active');
+
+      currentStudent = student;
+
+      studentDetails.innerHTML = `
+        <p><strong>Номер:</strong> ${student.number || "—"}</p>
+        <p><strong>Год:</strong> ${student.year || "—"}</p>
+        <p><strong>Фамилия:</strong> ${student.lastName || "—"}</p>
+        <p><strong>Имя, Отчество:</strong> ${student.firstName || "—"}, ${student.middleName || "—"}</p>
+        <p><strong>Год рождения:</strong> ${student.birthYear || "—"}</p>
+        <p><strong>Класс:</strong> ${student.class || "—"}</p>
+        <p><strong>Домашний адрес, телефон:</strong> ${student.address || "—"}, ${student.phone || "—"}</p>
+        <p><strong>Дата регистрации:</strong> ${student.regDate || "—"}</p>
+        <p>
+          <strong>Пароль:</strong> 
+          <span id="passwordText" data-password="${student.password || '—'}">••••••</span>
+          <button 
+            onmousedown="showPassword()" 
+            onmouseup="hidePassword()" 
+            onmouseleave="hidePassword()" 
+            style="margin-left:10px;">👁️</button>
+        </p>
+
+      `;
+
+      // Показать кнопки
+      document.getElementById("studentInfoButtons").style.display = "block";
+    }
+
+    function showPassword() {
+      if (!currentStudent) return;
+      document.getElementById("passwordText").textContent = currentStudent.password || "—";
+    }
+    function hidePassword() {
+      document.getElementById("passwordText").textContent = "••••••••";
+    }
+
+
+
+    function clearStudentInfo() {
+      studentDetails.innerHTML = '<div class="placeholder">Выберите ученика, чтобы увидеть информацию</div>';
+      document.getElementById("studentInfoButtons").style.display = "none";
+      currentStudent = null;
+
+      // Снять выделение учеников
+      document.querySelectorAll("#studentItems .class-button.active").forEach(el => el.classList.remove("active"));
+    }
+
+
+
+
+  
+    function openAddStudentModal() {
+      document.getElementById("addStudentModal").style.display = "flex";
+    }
+    function closeAddStudentModal() {
+      document.getElementById("addStudentModal").style.display = "none";
+    }
+
+    function saveNewStudent() {
+      const inputs = Array.from(document.querySelectorAll("#addStudentModal input"));
+      const student = {};
+
+      inputs.forEach(input => {
+        student[input.name] = input.value.trim();
+      });
+
+      // Генерация пароля
+      student["Пароль"] = generatePassword(getAllExistingPasswords());
+
+      // Инициализация пустого массива книг
+      student["books"] = [];
+
+      if (!currentClass) {
+        alert("Выберите класс перед добавлением ученика");
+        return;
+      }
+
+      const user = JSON.parse(localStorage.getItem("user"));
+      const schoolName = user?.school;
+
+      if (!schoolName) {
+        alert("Школа не найдена");
+        return;
+      }
+
+      firebase.database().ref("list1").once("value").then(snapshot => {
+        const schools = snapshot.val();
+        let schoolId = null;
+
+        for (const [id, data] of Object.entries(schools)) {
+          if (data.school === schoolName) {
+            schoolId = id;
+            break;
+          }
+        }
+
+        if (!schoolId) {
+          alert("Школа не найдена в базе");
+          return;
+        }
+
+        const studentsJsonPath = `list1/${schoolId}/students_json`;
+
+        return firebase.database().ref(studentsJsonPath).once("value").then(jsonSnap => {
+          let json = {};
+          try {
+            json = jsonSnap.exists() ? JSON.parse(jsonSnap.val()) : {};
+          } catch (e) {
+            console.error("Ошибка парсинга JSON:", e);
+          }
+
+          if (!json[currentClass]) {
+            json[currentClass] = [];
+          }
+
+          json[currentClass].push(student);
+
+          return firebase.database().ref(studentsJsonPath).set(JSON.stringify(json));
+        });
+      })
+      .then(() => {
+        closeAddStudentModal();
+        loadClassesFromDatabase(); // обновление классов и учеников
+      })
+      .catch(err => {
+        console.error("Ошибка при сохранении ученика:", err);
+        alert("Ошибка при сохранении ученика");
+      });
+    }
+
+
+    function openDeleteStudentModal() {
+      document.getElementById("deleteStudentModal").style.display = "flex";
+    }
+
+    function closeDeleteStudentModal() {
+      document.getElementById("deleteStudentModal").style.display = "none";
+    }
+
+    function reloadAndSelectClass() {
+      const user = JSON.parse(localStorage.getItem("user"));
+      const schoolName = user?.school;
+
+      firebase.database().ref("list1").once("value").then(snapshot => {
+        const schools = snapshot.val();
+        let schoolId = null;
+
+        for (const [id, data] of Object.entries(schools)) {
+          if (data.school === schoolName) {
+            schoolId = id;
+            break;
+          }
+        }
+
+        if (!schoolId) throw new Error("Школа не найдена");
+
+        const path = `list1/${schoolId}/students_json`;
+        return firebase.database().ref(path).once("value").then(jsonSnap => {
+          const json = jsonSnap.exists() ? JSON.parse(jsonSnap.val()) : {};
+          classes = json;
+
+          // 🟨 найти активный элемент класса
+          const allClassItems = document.querySelectorAll('#classItems .item');
+          const found = Array.from(allClassItems).find(el => el.textContent.trim() === currentClass);
+
+          if (found) {
+            selectClass(currentClass, found);
+          } else {
+            console.warn("Не найден элемент текущего класса:", currentClass);
+            // На всякий случай отрисуем только по имени класса
+            selectClass(currentClass, { classList: { add: () => {} } });
+          }
+        });
+      }).catch(err => {
+        console.error("Ошибка при обновлении списка учеников:", err);
+      });
+    }
+
+
+
+
+    function confirmDeleteStudent() {
+      if (!currentClass || !currentStudent) return;
+
+      const user = JSON.parse(localStorage.getItem("user"));
+      const schoolName = user?.school;
+
+      firebase.database().ref("list1").once("value").then(snapshot => {
+        const schools = snapshot.val();
+        let schoolId = null;
+
+        for (const [id, data] of Object.entries(schools)) {
+          if (data.school === schoolName) {
+            schoolId = id;
+            break;
+          }
+        }
+
+        if (!schoolId) throw new Error("Школа не найдена");
+
+        const path = `list1/${schoolId}/students_json`;
+
+        return firebase.database().ref(path).once("value").then(jsonSnap => {
+          let json = jsonSnap.exists() ? JSON.parse(jsonSnap.val()) : {};
+          if (!json[currentClass]) return;
+
+          const indexToRemove = parseInt(currentStudent.id.split("_")[1]);
+          const updated = json[currentClass].filter((_, i) => i !== indexToRemove);
+          json[currentClass] = updated;
+
+          return firebase.database().ref(path).set(JSON.stringify(json)).then(() => ({
+            schoolId,
+            updatedJson: json
+          }));
+        });
+      })
+      .then(({ schoolId, updatedJson }) => {
+        closeDeleteStudentModal();
+        currentStudent = null;
+        reloadAndSelectClass();
+      })
+      .catch(err => {
+        console.error("Ошибка при удалении ученика:", err);
+        alert("Ошибка при удалении ученика");
+      });
+    }
+
+
+
+
+
+
+    function generatePassword(existingPasswords) {
+      const words = [
+        'кот', 'мир', 'лес', 'дом', 'зебра', 'сова', 'луна', 'рыба', 'ягода', 'носок',
+        'трава', 'птица', 'вилка', 'лампа', 'каша', 'мыло', 'куст', 'печь', 'груша',
+        'овраг', 'панда', 'парус', 'крыша', 'перец', 'чашка', 'капля', 'сапог', 'почка',
+        'песок', 'вода', 'печка', 'плод', 'кисть', 'лист', 'земля', 'кость', 'хвост',
+        'облако', 'бочка', 'мороз', 'ветка', 'игла', 'озеро', 'книга', 'мышь', 'тесто',
+        'лопата', 'корка', 'банан', 'вишня', 'пуля', 'песня', 'палка', 'камень', 'свеча',
+        'кроха', 'пачка'
+      ];
+      const forbidden = new Set(["1488", "0069", "6969", "6900", "0690"]);
+
+      let password;
+      do {
+        const word = words[Math.floor(Math.random() * words.length)];
+        const digits = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+        if (forbidden.has(digits)) continue;
+        password = word + digits;
+      } while (existingPasswords.includes(password));
+
+      return password;
+    }
+
+    function getAllExistingPasswords() {
+      const passwords = [];
+      for (const cls of Object.values(classes)) {
+        for (const student of cls) {
+          if (student["Пароль"]) passwords.push(student["Пароль"]);
+        }
+      }
+      return passwords;
+    }
+
+
+
+    function submitStudent() {
+      const ids = [
+        "studentNumber", "studentYear", "studentLastName", "studentFirstName",
+        "studentMiddleName", "studentBirthYear", "studentEducation",
+        "studentAddress", "studentPhone", "studentRegDate"
+      ];
+
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (!el) {
+          console.error(`❌ Не найден элемент с id="${id}"`);
+        }
+      }
+
+      const newStudent = {
+        number: document.getElementById("studentNumber").value.trim(),
+        year: document.getElementById("studentYear").value.trim(),
+        lastName: document.getElementById("studentLastName").value.trim(),
+        firstName: document.getElementById("studentFirstName").value.trim(),
+        middleName: document.getElementById("studentMiddleName").value.trim(),
+        birthYear: document.getElementById("studentBirthYear").value.trim(),
+        education: document.getElementById("studentEducation").value.trim(),
+        address: document.getElementById("studentAddress").value.trim(),
+        phone: document.getElementById("studentPhone").value.trim(),
+        regDate: document.getElementById("studentRegDate").value.trim(),
+        password: generatePassword([])
+      };
+
+      const user = JSON.parse(localStorage.getItem("user"));
+      const schoolName = user?.school;
+
+      firebase.database().ref("list1").once("value").then(snapshot => {
+        const schools = snapshot.val();
+        let schoolId = null;
+
+        for (const [id, data] of Object.entries(schools)) {
+          if (data.school === schoolName) {
+            schoolId = id;
+            break;
+          }
+        }
+
+        if (!schoolId) throw new Error("Школа не найдена");
+
+        const path = `list1/${schoolId}/students_json`;
+
+        return firebase.database().ref(path).once("value").then(jsonSnap => {
+          let json = jsonSnap.exists() ? JSON.parse(jsonSnap.val()) : {};
+          if (!json[currentClass]) json[currentClass] = [];
+
+          json[currentClass].push({
+            "Номер": newStudent.number,
+            "Год": newStudent.year,
+            "Фамилия": newStudent.lastName,
+            "Имя": newStudent.firstName,
+            "Отчество": newStudent.middleName,
+            "Год рождения": newStudent.birthYear,
+            "Образование": newStudent.education,
+            "Домашний адрес": newStudent.address,
+            "Номер телефона": newStudent.phone,
+            "Дата регистрации": newStudent.regDate,
+            "Пароль": newStudent.password
+          });
+
+          return firebase.database().ref(path).set(JSON.stringify(json)).then(() => ({
+            schoolId,
+            updatedJson: json
+          }));
+        });
+      })
+      .then(({ schoolId, updatedJson }) => {
+        document.querySelectorAll('#addStudentModal input').forEach(i => i.value = "");
+        closeAddStudentModal();
+        currentStudent = null;
+        reloadAndSelectClass();
+      })
+      .catch(err => {
+        console.error("Ошибка при добавлении ученика:", err);
+        alert("Ошибка при добавлении ученика");
+      });
+    }
+
+
+
+    function clearStudentForm() {
+      const fields = [
+        "studentNumber", "studentYear", "studentLastName", "studentFirstName",
+        "studentMiddleName", "studentBirthYear", "studentEducation",
+        "studentAddress", "studentPhone", "studentRegDate"
+      ];
+      fields.forEach(id => document.getElementById(id).value = "");
+    }
+
+    function addClass() {
+      const gradeEl = document.getElementById("gradeSelect");
+      const letterEl = document.getElementById("letterSelect");
+
+      if (!gradeEl || !letterEl) {
+        alert("Элементы формы не найдены");
+        return;
+      }
+
+      const grade = gradeEl.value;
+      const letter = letterEl.value;
+
+      let newClassName;
+
+      if (grade === "11") {
+        newClassName = "Учителя";
+      } else {
+        newClassName = grade + (letter ? letter : "");
+      }
+
+      if (!newClassName) {
+        alert("Введите название класса");
+        return;
+      }
+
+      const user = JSON.parse(localStorage.getItem("user"));
+      const schoolName = user?.school;
+
+      if (!schoolName) {
+        alert("Школа не найдена в localStorage");
+        return;
+      }
+
+      firebase.database().ref("list1").once("value")
+        .then(snapshot => {
+          const schools = snapshot.val();
+          let schoolId = null;
+
+          for (const [id, data] of Object.entries(schools)) {
+            if (data.school === schoolName) {
+              schoolId = id;
+              break;
+            }
+          }
+
+          if (!schoolId) {
+            alert("Школа не найдена в базе");
+            return;
+          }
+
+          const studentsJsonPath = `list1/${schoolId}/students_json`;
+
+          return firebase.database().ref(studentsJsonPath).once("value").then(jsonSnap => {
+            let json = {};
+            try {
+              json = jsonSnap.exists() ? JSON.parse(jsonSnap.val()) : {};
+            } catch (e) {
+              console.error("Ошибка при парсинге JSON:", e);
+            }
+
+            if (json[newClassName]) {
+              alert("Класс уже существует");
+              return;
+            }
+
+            json[newClassName] = [];
+
+            return firebase.database().ref(studentsJsonPath).set(JSON.stringify(json));
+          });
+        })
+        .then(() => {
+          closeAddClassModal();
+          loadClassesFromDatabase();
+        })
+        .catch(err => {
+          console.error("Ошибка при добавлении класса:", err);
+          alert("Ошибка при добавлении класса");
+        });
+    }
+
+
+
+
+
+  </script>
+  
+</body>
+</html>
