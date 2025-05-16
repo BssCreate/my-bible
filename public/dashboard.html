@@ -447,8 +447,8 @@
   
     const user = JSON.parse(localStorage.getItem("user"));
     if (!user) {
-      alert("Сначала выполните вход");
-      location.href = "auth.html";
+      alert("Сначала выполните вход!");
+      location.href = "/warn";
     }
   
     const classItems = document.getElementById("classItems");
@@ -467,7 +467,7 @@
       const schoolName = localStorage.getItem("school");
       if (!schoolName) {
         alert("Школа не найдена в localStorage");
-        location.href = "auth.html";
+        location.href = "/warn";
         return;
       }
   
