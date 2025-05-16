@@ -96,7 +96,7 @@
     <p>сайт находится в разработке, введите сервисный код, чтобы войти в систему</p>
     <form id="codeForm">
       <div class="input-group">
-        <input type="text" id="codeInput" placeholder=" " required />
+        <input type="password" id="codeInput" placeholder=" " required />
         <label for="codeInput">Сервисный код</label>
       </div>
       <button type="submit">Войти</button>
@@ -108,7 +108,7 @@
       e.preventDefault();
       const code = document.getElementById("codeInput").value.trim();
       if (code === "090207") {
-        window.location.href = "/auth";
+        window.location.href = "/login";
       } else {
         alert("Неверный сервисный код");
       }
