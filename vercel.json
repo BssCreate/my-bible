@@ -1,8 +1,7 @@
 {
-    "rewrites": [
-      { "source": "/", "destination": "/public/warn" },
-      { "source": "/login", "destination": "/public/auth" },
-      { "source": "/dashboard", "destination": "/public/dashboard" }
-    ]
-  }
-  
+  "rewrites": [
+    { "source": "/", "destination": "/warn.html" },
+    { "source": "/login", "destination": "/auth.html" },
+    { "source": "/dashboard", "destination": "/dashboard.html" }
+  ]
+}
