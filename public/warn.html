@@ -9,10 +9,12 @@
       font-family: Arial, sans-serif;
       background: #f3f4f6;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
-      height: 100vh;
+      justify-content: center;
+      min-height: 100vh;
       margin: 0;
+      padding: 20px;
     }
 
     .container {
@@ -23,6 +25,7 @@
       max-width: 400px;
       width: 100%;
       text-align: center;
+      margin-bottom: 40px;
     }
 
     h1 {
@@ -88,6 +91,78 @@
     button:hover {
       background: #2563eb;
     }
+
+    .progress-section {
+      width: 100%;
+      max-width: 600px;
+      text-align: center;
+    }
+
+    .progress-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #374151;
+    }
+
+    .progress-bar {
+      position: relative;
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 4px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: #3b82f6;
+      width: 0%;
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+
+    .progress-points {
+      display: flex;
+      justify-content: space-between;
+      position: absolute;
+      top: -14px;
+      left: 0;
+      right: 0;
+    }
+
+    .point {
+      position: relative;
+      width: 28px;
+      height: 28px;
+      background: #e5e7eb;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 28px;
+      font-weight: bold;
+      color: #6b7280;
+      z-index: 2;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    .point.active {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .progress-labels,
+    .progress-descriptions {
+      display: flex;
+      font-weight: bold;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 12px;
+      color: #6b7280;
+      max-width: 600px;
+    }
+
+    .progress-descriptions {
+      font-style: italic;
+      color: #4b5563;
+    }
   </style>
 </head>
 <body>
@@ -96,11 +171,36 @@
     <p>сайт находится в разработке, введите сервисный код, чтобы войти в систему</p>
     <form id="codeForm">
       <div class="input-group">
-        <input type="password" id="codeInput" placeholder=" " required />
+        <input type="text" id="codeInput" placeholder=" " required />
         <label for="codeInput">Сервисный код</label>
       </div>
       <button type="submit">Войти</button>
     </form>
+  </div>
+
+  <div class="progress-section">
+    <div class="progress-title">Процесс работы</div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill"></div>
+      <div class="progress-points">
+        <div class="point" id="p1">1</div>
+        <div class="point" id="p2">2</div>
+        <div class="point" id="p3">3</div>
+        <div class="point" id="p4">4</div>
+      </div>
+    </div>
+    <div class="progress-labels">
+      <span>0%</span>
+      <span>35%</span>
+      <span>65%</span>
+      <span>100%</span>
+    </div>
+    <div class="progress-descriptions">
+      <span>Начало</span>
+      <span>Разработка</span>
+      <span>Почти завершено</span>
+      <span>Готово!</span>
+    </div>
   </div>
 
   <script>
@@ -108,11 +208,29 @@
       e.preventDefault();
       const code = document.getElementById("codeInput").value.trim();
       if (code === "090207") {
-        window.location.href = "/login";
+        window.location.href = "/auth";
       } else {
         alert("Неверный сервисный код");
       }
     });
+
+    function setProgress(percent) {
+      const fill = document.getElementById("progressFill");
+      fill.style.width = percent + "%";
+
+      const points = [0, 35, 65, 100];
+      points.forEach((value, index) => {
+        const pointEl = document.getElementById("p" + (index + 1));
+        if (percent >= value) {
+          pointEl.classList.add("active");
+        } else {
+          pointEl.classList.remove("active");
+        }
+      });
+    }
+
+    // 👉 Установи прогресс здесь (например, 65%)
+    setProgress(70);
   </script>
 </body>
 </html>
