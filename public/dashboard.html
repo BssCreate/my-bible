@@ -447,8 +447,8 @@
   
     const user = JSON.parse(localStorage.getItem("user"));
     if (!user) {
-      alert("Сначала выполните вход!");
-      location.href = "/warn";
+      alert("Сначала выполните вход");
+      location.href = "auth.html";
     }
   
     const classItems = document.getElementById("classItems");
@@ -467,7 +467,7 @@
       const schoolName = localStorage.getItem("school");
       if (!schoolName) {
         alert("Школа не найдена в localStorage");
-        location.href = "/warn";
+        location.href = "auth.html";
         return;
       }
   
@@ -766,44 +766,60 @@
       studentDetails.innerHTML = '<div class="placeholder">Выберите ученика, чтобы увидеть информацию</div>';
     }
 
-  
+    function formatDateToDDMMYYYY(dateStr) {
+      if (!dateStr || typeof dateStr !== "string") return dateStr;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        const [yyyy, mm, dd] = dateStr.split("-");
+        return `${dd}.${mm}.${yyyy}`;
+      }
+      return dateStr; // уже в нужном или странном формате
+    }
+
     function selectStudent(student, element) {
+      // Убираем активность со всех
       document.querySelectorAll('#studentItems .item').forEach(el => el.classList.remove('active'));
-      element.classList.add('active');
+
+      // Безопасная проверка на существование перед использованием
+      if (element) {
+        element.classList.add('active');
+      } else {
+        console.warn("Элемент не найден для активации в selectStudent");
+      }
 
       currentStudent = student;
+
+      const formattedRegDate = formatDateToDDMMYYYY(student.regDate);
+      const formattedBirthYear = formatDateToDDMMYYYY(student.birthYear);
 
       studentDetails.innerHTML = `
         <p><strong>Номер:</strong> ${student.number || "—"}</p>
         <p><strong>Год:</strong> ${student.year || "—"}</p>
         <p><strong>Фамилия:</strong> ${student.lastName || "—"}</p>
         <p><strong>Имя, Отчество:</strong> ${student.firstName || "—"}, ${student.middleName || "—"}</p>
-        <p><strong>Год рождения:</strong> ${student.birthYear || "—"}</p>
+        <p><strong>Год рождения:</strong> ${formattedBirthYear || "—"}</p>
         <p><strong>Класс:</strong> ${student.class || "—"}</p>
         <p><strong>Домашний адрес, телефон:</strong> ${student.address || "—"}, ${student.phone || "—"}</p>
-        <p><strong>Дата регистрации:</strong> ${student.regDate || "—"}</p>
+        <p><strong>Дата регистрации:</strong> ${formattedRegDate || "—"}</p>
         <p>
           <strong>Пароль:</strong> 
-          <span id="passwordText" data-password="${student.password || '—'}">••••••</span>
-          <button 
-            onmousedown="showPassword()" 
-            onmouseup="hidePassword()" 
-            onmouseleave="hidePassword()" 
-            style="margin-left:10px;">👁️</button>
+          <span id="passwordText" data-password="${student.password || '—'}">••••••••••••••</span>
+          <button id="togglePassword" style="margin-left:10px;">👁️</button>
         </p>
-
       `;
 
-      // Показать кнопки
-      document.getElementById("studentInfoButtons").style.display = "block";
-    }
+      // Кнопка показа пароля
+      const toggleBtn = document.getElementById("togglePassword");
+      toggleBtn.addEventListener("click", () => {
+        const pwdEl = document.getElementById("passwordText");
+        const currentText = pwdEl.textContent;
+        if (currentText === "••••••••••••••") {
+          pwdEl.textContent = pwdEl.dataset.password;
+        } else {
+          pwdEl.textContent = "••••••••••••••";
+        }
+      });
 
-    function showPassword() {
-      if (!currentStudent) return;
-      document.getElementById("passwordText").textContent = currentStudent.password || "—";
-    }
-    function hidePassword() {
-      document.getElementById("passwordText").textContent = "••••••••";
+      document.getElementById("studentInfoButtons").style.display = "block";
     }
 
 
@@ -816,10 +832,6 @@
       // Снять выделение учеников
       document.querySelectorAll("#studentItems .class-button.active").forEach(el => el.classList.remove("active"));
     }
-
-
-
-
   
     function openAddStudentModal() {
       document.getElementById("addStudentModal").style.display = "flex";
@@ -833,7 +845,15 @@
       const student = {};
 
       inputs.forEach(input => {
-        student[input.name] = input.value.trim();
+        let value = input.value.trim();
+
+        // Если это поле типа date — форматируем в дд.мм.гггг
+        if (input.type === "date" && value) {
+          const [yyyy, mm, dd] = value.split("-");
+          value = `${dd}.${mm}.${yyyy}`;
+        }
+
+        student[input.name] = value;
       });
 
       // Генерация пароля
@@ -901,9 +921,23 @@
     }
 
 
+
     function openDeleteStudentModal() {
+      if (!currentStudent || !currentClass) return;
+
+      const fullName = `${currentStudent.lastName || ''} ${currentStudent.firstName || ''}`.trim();
+      const className = currentClass || "неизвестный класс";
+
+      const deleteTextEl = document.getElementById("deleteStudentText");
+      deleteTextEl.textContent = `Вы уверены, что хотите удалить ученика ${fullName} из класса ${className}?`;
+
       document.getElementById("deleteStudentModal").style.display = "flex";
     }
+
+    function closeSaveStudentModal() {
+      document.getElementById("editStudentModal").style.display = "none";
+    }
+
 
     function closeDeleteStudentModal() {
       document.getElementById("deleteStudentModal").style.display = "none";
@@ -947,6 +981,112 @@
         console.error("Ошибка при обновлении списка учеников:", err);
       });
     }
+
+    function submitEditStudent() {
+      const editedStudent = {
+        "Номер": document.getElementById("editStudentNumber").value.trim(),
+        "Год": document.getElementById("editStudentYear").value.trim(),
+        "Фамилия": document.getElementById("editStudentLastName").value.trim(),
+        "Имя": document.getElementById("editStudentFirstName").value.trim(),
+        "Отчество": document.getElementById("editStudentMiddleName").value.trim(),
+        "Год рождения": document.getElementById("editStudentBirthYear").value.trim(),
+        "Образование": document.getElementById("editStudentEducation").value.trim(),
+        "Домашний адрес": document.getElementById("editStudentAddress").value.trim(),
+        "Номер телефона": document.getElementById("editStudentPhone").value.trim(),
+        "Дата регистрации": document.getElementById("editStudentRegDate").value.trim(),
+        // НЕ берем пароль из формы, чтобы он не менялся
+      };
+
+      const user = JSON.parse(localStorage.getItem("user"));
+      const schoolName = user?.school;
+
+      firebase.database().ref("list1").once("value").then(snapshot => {
+        const schools = snapshot.val();
+        let schoolId = null;
+
+        for (const [id, data] of Object.entries(schools)) {
+          if (data.school === schoolName) {
+            schoolId = id;
+            break;
+          }
+        }
+
+        if (!schoolId) throw new Error("Школа не найдена");
+
+        const path = `list1/${schoolId}/students_json`;
+
+        return firebase.database().ref(path).once("value").then(jsonSnap => {
+          let json = jsonSnap.exists() ? JSON.parse(jsonSnap.val()) : {};
+          if (!json[currentClass]) {
+            console.warn("Класс не найден в json:", currentClass);
+            return;
+          }
+
+          const indexToUpdate = parseInt(currentStudent.id.split("_")[1]);
+          if (!json[currentClass][indexToUpdate]) {
+            console.warn("Ученик с таким индексом не найден");
+            return;
+          }
+
+          // Обновляем данные ученика, но сохраняем старый пароль без изменений
+          json[currentClass][indexToUpdate] = { 
+            ...json[currentClass][indexToUpdate],  // текущие данные
+            ...editedStudent,                      // новые данные из формы
+            "Пароль": json[currentClass][indexToUpdate]["Пароль"]  // оставляем пароль без изменений
+          };
+
+          return firebase.database().ref(path).set(JSON.stringify(json)).then(() => {
+            console.log("Ученик успешно сохранён!");
+
+            reloadAndSelectClass();
+
+            setTimeout(() => {
+              const updatedStudent = {
+                id: `${currentClass}_${indexToUpdate}`,
+                class: currentClass,
+                number: editedStudent["Номер"] || "—",
+                year: editedStudent["Год"] || "—",
+                lastName: editedStudent["Фамилия"] || "—",
+                firstName: editedStudent["Имя"] || "—",
+                middleName: editedStudent["Отчество"] || "—",
+                birthYear: editedStudent["Год рождения"] || "—",
+                education: editedStudent["Образование"] || "—",
+                address: editedStudent["Домашний адрес"] || "—",
+                phone: editedStudent["Номер телефона"] || "—",
+                regDate: editedStudent["Дата регистрации"] || "—",
+                password: json[currentClass][indexToUpdate]["Пароль"] || "—"  // пароль берём из базы
+              };
+
+              const studentElements = document.querySelectorAll("#studentItems .class-button");
+              const studentDiv = Array.from(studentElements).find(div =>
+                div.textContent.includes(editedStudent["Фамилия"])
+              );
+
+              currentStudent = updatedStudent;
+              if (typeof selectStudent === "function") {
+                selectStudent(updatedStudent, studentDiv || null);
+              }
+            }, 300);
+
+            closeEditStudentModal();
+            if (typeof closeSaveStudentModal === "function") {
+              closeSaveStudentModal();
+            }
+          });
+        });
+      }).catch(err => {
+        console.error("Ошибка при сохранении ученика:", err);
+        alert("Ошибка при сохранении");
+        if (typeof closeSaveStudentModal === "function") {
+          closeSaveStudentModal();
+          currentStudent = editedStudent; // обновляем текущего ученика
+          showStudentDetails(editedStudent); // обновляем отображение
+          loadClassesFromDatabase();
+        }
+      });
+    }
+
+
 
 
 
